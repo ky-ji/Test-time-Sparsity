@@ -34,8 +34,10 @@ from TTSInfer.pruner.train.logger import Logger
 from TTSInfer.pruner import utils
 from TTSInfer.pruner.train.gate_scheduler import calculate_gate_statistics_trajectory
 from TTSInfer.pruner.trajectory.trajectory_dataset import TrajectoryDataset
-from TTSInfer.pruner.train.transformer_pruner import TransformerPruner
-from TTSInfer.pruner.train.train_utils import enumerate_decoder_block_keys
+from TTSInfer.pruner.train.transformer_pruner import (
+    TransformerPruner,
+    enumerate_decoder_block_keys,
+)
 from datetime import datetime, timezone
 from TTSInfer.pruner.utils import get_task_ckpt_with_train_version
 
