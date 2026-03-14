@@ -26,6 +26,10 @@
 - **Omnidirectional Feature Reusing**: Achieves **95% sparsity** by selectively reusing features cached from the current forward, previous denoising timesteps, and earlier rollout iterations
 - **Highly Parallelized Pipeline**: Decouples encoding and pruning from the autoregressive denoising loop, reducing non-decoder delay to milliseconds via parallel processing and asynchronous execution
 
+<p align="center">
+  <img src="TTSInfer/assets/overview.png" width="90%" alt="TTS Method Overview"/>
+</p>
+
 ---
 
 ## Installation
@@ -114,6 +118,10 @@ python -m TTSInfer.scripts.train_eval.eval_pruner \
   --epoch <best_epoch> \
   --device cuda:0
 ```
+
+<p align="center">
+  <img src="TTSInfer/assets/inference.png" width="75%" alt="TTS Inference Pipeline"/>
+</p>
 
 ### Step 6: Speed Benchmarking
 
