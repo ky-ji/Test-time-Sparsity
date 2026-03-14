@@ -121,15 +121,14 @@ datas/
 checkpoint/
 checkpoints/
 
-# Stage 2 trajectory training data (generated artifact, not source code)
+# Trajectory training data (generated artifact, not source code)
 TTSInfer/training_data/
 **/training_data/
 
 # Experiment outputs
-stage1result/
-stage2result/
+sim_result/
+realworld-TTS/output/
 exp_output/
-exp_stage2/
 
 ################################################################################
 # Large binary artifacts (common in ML projects)

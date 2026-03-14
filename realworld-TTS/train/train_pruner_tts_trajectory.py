@@ -37,10 +37,10 @@ logger = logging.getLogger(__name__)
 
 #  TTSInfer  pruner
 from pruner.train.transformer_pruner import TransformerPruner  # noqa: E402
-from pruner.train.gate_scheduler import calculate_gate_statistics_stage2  # noqa: E402
+from pruner.train.gate_scheduler import calculate_gate_statistics_trajectory  # noqa: E402
 from pruner.train.losses import compose_total_loss  # noqa: E402
 from pruner.train.train_utils import set_seed, save_pruner_ckpt  # noqa: E402
-from pruner.stage2.trajectory_dataset import TrajectoryDataset  # noqa: E402
+from pruner.trajectory.trajectory_dataset import TrajectoryDataset  # noqa: E402
 
 #  diffusion_policy
 
@@ -163,21 +163,21 @@ def train_epoch_trajectory(
     trajectory_sample_ratio=1.0
 ):
     """
-    Episode-based - TTSInferwrapperbatchpruner
+    Episode-based trajectory training with the TTS wrapper.
 
-    TTSInfer/scripts/train_eval/train_pruner_2stage.py
-    1. episode batches
-    2. episode batchis_first_predict_action_in_chunk=True
-    3. batchframes
-    4. framesetupis_first_predict_action_in_chunk=False
-    5. Wrapperpredict_actionbatchprunergate
-    6. Rollout cacheepisode batchframe
-    
-    
-    -  grad_accum_steps  optimizer.step()
-    -  AMP 
-    -  loss gate
-    -  epoch  trajectory_sample_ratio 
+    This follows the same rollout-cache training pattern as the released
+    simulation pruner pipeline:
+    1. iterate over episode batches
+    2. reset `is_first_predict_action_in_chunk=True` at batch start
+    3. iterate over frames inside each episode batch
+    4. switch `is_first_predict_action_in_chunk=False` after the first frame
+    5. call the wrapper through `predict_action()` to obtain gates
+    6. keep rollout-cache state across frames within the same episode batch
+
+    Notes:
+    - optimizer stepping supports gradient accumulation
+    - AMP can be enabled
+    - trajectory sampling ratio can subsample batches per epoch
     """
     pruner.train()
     policy.eval()
@@ -257,7 +257,7 @@ def train_epoch_trajectory(
                    
                 gate_hard = policy._cache['gate']
                 
-                gate_stats = calculate_gate_statistics_stage2(gate_hard)
+                gate_stats = calculate_gate_statistics_trajectory(gate_hard)
                 current_pruning_ratio = gate_stats['pruning_ratio']
                 
                 # framefirst
@@ -419,7 +419,7 @@ def validate_epoch_trajectory(
 
                 gate_hard = policy._cache['gate']
                 
-                gate_stats = calculate_gate_statistics_stage2(gate_hard)
+                gate_stats = calculate_gate_statistics_trajectory(gate_hard)
                 current_pruning_ratio = gate_stats['pruning_ratio']
 
                 # framefirst

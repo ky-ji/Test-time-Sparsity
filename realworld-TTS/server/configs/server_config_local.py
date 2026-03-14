@@ -1,13 +1,11 @@
-"""
-/ TTS server_config
-"""
+"""Local TTS server config template."""
 
 # Server
 SERVER_IP = "0.0.0.0"
 SERVER_PORT = 8007
 
 # Model
-CHECKPOINT_PATH = ""  # TODO: /abs/path/to/policy.ckpt
+CHECKPOINT_PATH = ""  # Set to /abs/path/to/policy.ckpt
 USE_EMA = True
 
 # Inference
@@ -39,7 +37,7 @@ ENABLE_ACTION_LIMIT = False
 
 # TTS acceleration
 ENABLE_TTS = True
-PRUNER_CHECKPOINT = ""  # TODO: /abs/path/to/pruner.pt TTS
+PRUNER_CHECKPOINT = ""  # Set to /abs/path/to/pruner.pt
 TARGET_PRUNE_RATIO = 0.93
 PRUNER_CONFIG = {
     "hidden_dim": 512,

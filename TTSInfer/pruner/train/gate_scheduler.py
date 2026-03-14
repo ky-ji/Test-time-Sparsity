@@ -237,7 +237,7 @@ def calculate_pruning_ratio_tensor(
     return pruning_ratio
 
 
-def calculate_gate_statistics_stage2(
+def calculate_gate_statistics_trajectory(
     hard_gate: torch.Tensor
 ) -> Dict[str, float]:
     """

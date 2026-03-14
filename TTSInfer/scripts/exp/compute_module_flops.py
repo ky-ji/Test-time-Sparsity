@@ -9,7 +9,7 @@ Diffusion PolicyPrunerFLOPs
 :
 python TTSInfer/scripts/compute_module_flops.py \
     --checkpoint checkpoint/can_mh/diffusion_policy_transformer/train_0/checkpoints/latest.ckpt \
-    --pruner_path stage1result/stage2ckpt/end2end/20251030_223523/0/can_mh/10/pruner_model_18_0.0034_0.93.pt \
+    --pruner_path sim_result/pruner_ckpt/20251030_223523/0/can_mh/pruner_model_18_0.0034_0.93.pt \
     --task_name can_mh \
     --device cuda:3 \
     --batch_size 1
@@ -36,7 +36,6 @@ from thop import profile, clever_format
 from TTSInfer.pruner.eval.eval_utils import (
     construct_obs_dict, load_workspace, load_pruner_model
 )
-from TTSInfer.pruner.stage2.stage2_utils import  add_new_head_dim
 from TTSInfer.pruner.train.transformer_pruner import enumerate_decoder_block_keys
 from TTSInfer.pruner.train.gate_scheduler import apply_scheduler_single
 
@@ -161,7 +160,7 @@ def count_encoder_flops(
         logger.info(f"   Config: seq_len={seq_len}, d_model={d_model}, n_head={n_head}, dim_ff={dim_ff}, n_layers={n_encoder_layers}")
         
         # FLOPs
-        flops_encoder_layer_single = manual_transformer_encod er_layer_flops(seq_len, d_model, n_head, dim_ff)
+        flops_encoder_layer_single = manual_transformer_encoder_layer_flops(seq_len, d_model, n_head, dim_ff)
         flops_encoder_single = flops_encoder_layer_single * n_encoder_layers
         flops_encoder = flops_encoder_single * (batch_size * num_steps)
         

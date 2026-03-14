@@ -495,8 +495,8 @@ def load_pruner_model(pruner_path: str, cfg: Any, device: torch.device, policy=N
     ).to(device)
   
     if rollout_cache:
-        from TTSInfer.pruner.stage2.stage2_utils import  add_new_head_dim
-        pruner = add_new_head_dim(pruner,init_bias_stage2=0.0)
+        from TTSInfer.pruner.trajectory.trajectory_utils import expand_pruner_head_for_rollout_cache
+        pruner = expand_pruner_head_for_rollout_cache(pruner, init_bias_trajectory=0.0)
     
     if os.path.exists(pruner_path):
         #checkpoint = torch.load(pruner_path, map_location='cpu', weights_only=False)

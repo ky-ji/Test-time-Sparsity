@@ -1,6 +1,6 @@
 #!/bin/bash
-# TTS Pruner Training Script
-# Episode-based training with converted Trajectory data
+# TTS pruner training script
+# Episode-based training with converted trajectory data
 
 set -e
 
@@ -63,7 +63,7 @@ echo "Training TTS Pruner (Episode-based)"
 echo "=================================================="
 echo "Training with:"
 echo "  - Real pruner object (not None)"
-echo "  - Step-by-step pruner calls (TTSInfer style)"
+echo "  - Step-by-step pruner calls with rollout cache"
 echo "  - Episode-based training with rollout cache"
 echo "  - 4-dimensional gates (compute, 3cache, 24cache, rollout_cache)"
 echo ""
@@ -98,5 +98,5 @@ echo "  ✓ Rollout cache enabled for cross-frame reuse"
 echo "  ✓ 4-strategy gates (compute, 3cache, 24cache, rollout_cache)"
 echo "  ✓ Step-by-step pruner computation (performance optimized)"
 echo ""
-echo "This training pipeline fully replicates TTSInfer on real robot data!"
+echo "This training pipeline mirrors the released simulation pruner flow on real robot data."
 echo "=================================================="

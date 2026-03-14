@@ -92,80 +92,55 @@ This section reproduces the main results from Tables 1–3 of the paper using th
 ```
 Test-time-Sparsity/
 ├── TTSInfer/
-│   └── pruner_config/          # training configs (4 main configs)
+│   └── pruner_config/          # single simulation training config
 ├── diffusion_policy/           # submodule: base policy + env runner
 └── <your_checkpoint.ckpt>      # baseline DP checkpoint (user-provided)
 ```
 
-### Stage 1: Train the Pruner
+### Train the Pruner
 
-Train the lightweight pruner to predict per-forward pruning decisions:
-
-```bash
-python -m TTSInfer.scripts.train_eval.train_pruner_2stage \
-  --config_id 2stage2 \
-  --task_name can_ph \
-  --device cuda:0 \
-  --output_dir exp_output \
-  --train_version 0
-```
-
-**Input**: baseline `.ckpt` checkpoint (loaded automatically based on `task_name`)  
-**Output**: `exp_output/stage1ckpt/<timestamp>/<train_id>/<task_name>/pruner_model_<epoch>_<loss>.pt`
-
-Available configs in `TTSInfer/pruner_config/`:
-
-| Config | Description |
-|--------|-------------|
-| `training_config_2stage2.yaml` | Default main-result config (recommended starting point) |
-| `training_config_2stage96.yaml` | Larger Stage 2 trajectory batches |
-| `training_config_40ddim96.yaml` | DDIM scheduler variant (50-step, Table 4) |
-| `training_config_95pr96.yaml` | 95% sparsity variant |
-
-Additional supplementary configs (for ablation/sensitivity analysis) are in `TTSInfer/pruner_config/supplementary/`.
-Main-table config guesses and example commands are summarized in `MAIN_TABLES.md`.
-
-### Trajectory-Based Training
-
-The released simulation code trains a rollout-cache pruner directly from trajectory data. This is the training path used by the main public configs.
+The released simulation code trains a rollout-cache pruner directly from trajectory data.
 
 ```bash
-python -m TTSInfer.scripts.train_eval.train_pruner_2stage \
-  --config_id 2stage2 \
+python -m TTSInfer.scripts.train_eval.train_pruner \
   --task_name can_ph \
   --device cuda:0 \
-  --output_dir exp_stage2 \
-  --pruner_epoch 2 \
+  --output_dir sim_result \
+  --config TTSInfer/pruner_config/training_config.yaml \
   --datatype max \
   --train_version 0
 ```
 
 **Input**: trajectory data under `pruner_tra_data_max/trajectories/<task_name>`  
-**Output**: `exp_stage2/stage2ckpt/end2end/<timestamp>/<train_id>/<task_name>/pruner_model_<epoch>_<loss>.pt`
+**Output**: `sim_result/pruner_ckpt/<timestamp>/<train_id>/<task_name>/pruner_model_<epoch>_<loss>.pt`
+
+The simulation release keeps a single config file:
+
+| File | Purpose |
+|------|---------|
+| `training_config.yaml` | Default simulation training config |
 
 Notes:
 
-- `--pruner_epoch` is kept for compatibility with historical experiment naming and output folder layout.
-- The current public configs keep only parameters that are actually consumed by the released simulation training code.
+- The released simulation code exposes a single trajectory-based pruner training path.
+- `trajectory_training` in the config controls episode counts, batch sizes, and learning rate for trajectory-based training.
 
 ### Evaluate
 
 Evaluate the pruner-accelerated policy on simulation benchmarks:
 
 ```bash
-python -m TTSInfer.scripts.train_eval.eval_pruner_dp \
-  --output_dir exp_stage2 \
+python -m TTSInfer.scripts.train_eval.eval_pruner \
+  --output_dir sim_result/pruner_ckpt \
   --timestamp <train_timestamp> \
   --task_name can_ph \
   --train_id 0 \
   --epoch <best_epoch> \
-  --stage1_epoch <stage1_epoch> \
   --device cuda:0 \
-  --rollout_cache True \
-  --stage2_mode end2end
+  --rollout_cache True
 ```
 
-**Input**: Stage 2 pruner checkpoint  
+**Input**: trained pruner checkpoint under `sim_result/pruner_ckpt/<timestamp>/<train_id>/<task_name>/`  
 **Output**: success rate, sparsity ratio, and action error metrics printed to stdout
 
 ### Speed Benchmarking
@@ -176,20 +151,18 @@ Measure wall-clock inference latency to reproduce the speedup numbers:
 python -m TTSInfer.scripts.exp.eval_speed_only \
   -t can_ph \
   -e <epoch> \
-  --train_root <path_to_exp_stage2> \
+  --train_root <path_to_sim_result/pruner_ckpt/<timestamp>/<train_id>/<task_name>> \
   --device cuda:0
 ```
 
 ### Supplementary Analysis Scripts
 
-The following scripts in `TTSInfer/scripts/exp/` reproduce supplementary experiments:
+The following scripts in `TTSInfer/scripts/exp/` are still kept as optional analysis utilities:
 
 | Script | Purpose |
 |--------|---------|
-| `eval_pruner_ablation.py` | Ablation on omnidirectional cache (Tables 6–8) |
 | `eval_ddim_steps.py` | DDIM step count sensitivity |
 | `compute_module_flops.py` | FLOPs breakdown (Figure 4) |
-| `train_pruner_ablation_single_cache.py` | Single-cache ablation training |
 
 ---
 

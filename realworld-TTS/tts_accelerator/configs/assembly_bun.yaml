@@ -1,4 +1,4 @@
-# TTS Acceleration config example - Assembly Chocolate
+# TTS Acceleration config example - Assembly Bun
 # 
 #   python tts_accelerator/scripts/run_dp_with_tts.py --config tts_accelerator/configs/assembly_bun.yaml
 #
@@ -7,7 +7,7 @@
 checkpoint_path: "/path/to/your/dp_policy.ckpt"  # TODO: Change to your DP checkpoint path
 use_ema: true
 
-# ===== Config =====
+# ===== Runtime Config =====
 server_ip: "0.0.0.0"
 server_port: 8007
 device: "cuda:0"
@@ -15,7 +15,7 @@ scheduler: "DDPM"
 num_inference_steps: 100
 inference_freq: 20.0
 
-# ===== Config =====
+# ===== Action Config =====
 action_scale: 1.0
 smoothing_alpha: 0.0
 max_delta_position: 0.04
@@ -23,8 +23,8 @@ max_delta_rotation: 0.1
 enable_action_limit: false
 
 # ===== TTS Config =====
-enable_tts: true  # Whether to enable TTS accelerationfalse  pruner_checkpoint 
-pruner_checkpoint: ""  # TODO: Change to your pruner checkpoint path
+enable_tts: true
+pruner_checkpoint: ""  # Set to your trained pruner checkpoint path
 target_prune_ratio: 0.90
 
 pruner_config:

@@ -558,9 +558,9 @@ def visualize_hard_gates(gates: Union[GatesDict, torch.Tensor], output_path: str
     print(f": {num_blocks} blocks × {num_steps} steps")
 
 
-def visualize_hard_gates_stage2(gate_tensor: torch.Tensor, block_names: List[str], output_path: str, title: str = "Stage2 Hard Gates Visualization") -> None:
+def visualize_hard_gates_trajectory(gate_tensor: torch.Tensor, block_names: List[str], output_path: str, title: str = "Trajectory Hard Gates Visualization") -> None:
     """
-    stage2hard_gate
+    Visualize 4-way trajectory gates with rollout-cache reuse.
     
     Args:
         gate_tensor: [batch, T, B, 4] 
@@ -671,7 +671,7 @@ def visualize_hard_gates_stage2(gate_tensor: torch.Tensor, block_names: List[str
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"Stage2 Gate: {output_path}")
+    print(f"Trajectory Gate: {output_path}")
     print(f": {total_decisions}")
     print(f"COMPUTE: {compute_count} ({compute_ratio:.1f}%)")
     print(f"3Cache REUSE: {reuse_3cache_count} ({reuse_3_ratio:.1f}%)")
@@ -681,13 +681,13 @@ def visualize_hard_gates_stage2(gate_tensor: torch.Tensor, block_names: List[str
     print(f": {num_blocks} blocks × {num_steps} steps")
 
 
-def create_gate_animation_stage2(gates_sequence: List[Tuple[int, torch.Tensor]], 
-                                block_names: List[str],
-                                output_path: str, 
-                                title_prefix: str = "Stage2 Hard Gates Evolution", 
-                                duration: float = 0.5) -> None:
+def create_gate_animation_trajectory(gates_sequence: List[Tuple[int, torch.Tensor]],
+                                    block_names: List[str],
+                                    output_path: str,
+                                    title_prefix: str = "Trajectory Hard Gates Evolution",
+                                    duration: float = 0.5) -> None:
     """
-    stage2hard gateGIF
+    Create a GIF that shows the evolution of trajectory gates.
     
     Args:
         gates_sequence: [(step_number, gates)] gatestensor [1, T, B, 4]
@@ -708,7 +708,7 @@ def create_gate_animation_stage2(gates_sequence: List[Tuple[int, torch.Tensor]],
     _, num_steps, num_blocks, gate_dim = first_gates.shape
     
     if gate_dim != 4:
-        print(f"Warning: Expected 4-way gates for stage2, got {gate_dim}-way gates. Using standard animation.")
+        print(f"Warning: Expected 4-way trajectory gates, got {gate_dim}-way gates. Using standard animation.")
         return create_gate_animation(gates_sequence, block_names, output_path, title_prefix, duration)
     
     frames_data = []

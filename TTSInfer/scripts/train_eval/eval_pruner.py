@@ -1,191 +1,4 @@
-"""
-
-python TTSInfer/scripts/train_eval/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251030_233625 \
---task_name  kitchen \
---train_id 0 \
---epoch 10 \
---stage1_epoch 10 \
---device cuda:2 \
---rollout_cache True \
---stage2_mode end2end 
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251109_222340 \
---task_name  square_mh \
---train_id 2 \
---epoch 19 \
---stage1_epoch 40ddim96 \
---device cuda:5 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251109_181305 \
---task_name  square_ph \
---train_id 2 \
---epoch 11 \
---stage1_epoch 40ddim96 \
---device cuda:6 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251109_043225 \
---task_name  can_ph \
---train_id 1 \
---epoch 16 \
---stage1_epoch 40ddim160 \
---device cuda:2 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251109_084606 \
---task_name  can_ph \
---train_id 2 \
---epoch 8 \
---stage1_epoch 40ddim160 \
---device cuda:3 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251109_000457 \
---task_name  tool_hang_ph \
---train_id 0 \
---epoch 19 \
---stage1_epoch 40ddim64 \
---device cuda:1 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251109_053040 \
---task_name  transport_mh \
---train_id 1 \
---epoch 7 \
---stage1_epoch 40ddim112 \
---device cuda:6 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251108_162113 \
---task_name  tool_hang_ph \
---train_id 1 \
---epoch 17 \
---stage1_epoch 40ddim64 \
---device cuda:7 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 40
-
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251108_163057 \
---task_name  can_mh \
---train_id 0 \
---epoch 12 \
---stage1_epoch 40ddim160 \
---device cuda:5 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251109_000504 \
---task_name  transport_mh \
---train_id 0 \
---epoch 19 \
---stage1_epoch 40ddim112 \
---device cuda:2 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 50
-
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251108_163212 \
---task_name  square_ph \
---train_id 0 \
---epoch 16 \
---stage1_epoch 40ddim96 \
---device cuda:2 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 40
-
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251107_190154 \
---task_name  kitchen \
---train_id 0 \
---epoch 18 \
---stage1_epoch 40ddim96 \
---device cuda:2 \
---rollout_cache True \
---stage2_mode end2end \
---ddim 40
-
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251103_092149 \
---task_name  can_ph \
---train_id 2 \
---epoch 9 \
---stage1_epoch 951602 \
---device cuda:6 \
---rollout_cache True \
---stage2_mode end2end
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251030_233924 \
---task_name  square_ph \
---train_id 0 \
---epoch 17 \
---stage1_epoch 96 \
---device cuda:1 \
---rollout_cache True \
---stage2_mode end2end
-
-python TTSInfer/scripts/eval_pruner_dp.py \
---output_dir stage1result/stage2ckpt \
---timestamp 20251103_113210 \
---task_name  transport_mh \
---train_id 2 \
---epoch 19 \
---stage1_epoch 951122 \
---device cuda:6 \
---rollout_cache True \
---stage2_mode end2end
-
-
-
-
-"""
+"""Simulation evaluation for trained pruners."""
 
 
 import os
@@ -229,7 +42,7 @@ from TTSInfer.pruner.eval.eval_utils import (
     prepare_env_runner_config, get_actions_per_inference,load_workspace, 
     create_policies, process_runner_log,GateTracker, SoftGateTracker, export_gate_data
 )
-from TTSInfer.pruner.train.train_utils import create_gate_animation, create_gate_animation_stage2
+from TTSInfer.pruner.train.train_utils import create_gate_animation, create_gate_animation_trajectory
 from TTSInfer.pruner.eval.env_runner_setup import instantiate_env_runner
 from TTSInfer.pruner.eval.reuse_module import reuse_block as reuse_block_module
 
@@ -270,7 +83,7 @@ from TTSInfer.pruner.utils import get_task_ckpt_with_train_version
 
 # Basic logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("eval_pruner_dp")
+logger = logging.getLogger("eval_pruner")
 logging.getLogger('absl').setLevel(logging.WARNING)
 
 # Set output buffering
@@ -281,7 +94,7 @@ sys.stderr = open(sys.stderr.fileno(), mode='w', buffering=1)
 @click.option('-c', '--checkpoint', default='auto', help='Policy checkpoint path"auto"task_nametrain_id')
 @click.option('-e', '--epoch', required=True, help='Epoch number')
 @click.option('-tr', '--train_id', default='train0', help='Training ID ( train1, train2)')
-@click.option('-o', '--output_dir', default='exp_output', help='Base output directory ( exp_output)')
+@click.option('-o', '--output_dir', default='sim_result/pruner_ckpt', help='Root directory containing trained pruner checkpoints')
 @click.option('-t', '--task_name', required=True, help='Task name')
 @click.option('-s', '--seed', default='0', help='Random seed')
 @click.option('-d', '--device', default='cuda:1', help='Device')
@@ -296,13 +109,11 @@ sys.stderr = open(sys.stderr.fileno(), mode='w', buffering=1)
 @click.option('--save_pruning_image', default=True, type=bool, help='Save pruning images')
 @click.option('--reuse_block', default=False, type=bool, help=' block embedding  self-attention')
 @click.option('--rollout_cache', default=False, type=bool, help='')
-@click.option('--stage1_epoch', default=9, type=str, help='stage1 epoch')
-@click.option('--stage2_mode', type=click.Choice(['2stage', 'end2end']), default='end2end', help='Legacy result subdirectory name. Use `end2end` for the released simulation checkpoints.')
 @click.option('--ddim', default=None, type=int, help='DDIM scheduler--ddim 4040DDIM')
 @click.option('--save_gate', default=False, type=bool, help='hard gatesoft gate')
 
 
-def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode, skip_video, num_trials, timestamp, pruner_path, save_pruning_image,  one_gate, reuse_block, rollout_cache, stage1_epoch, stage2_mode, ddim, save_gate):
+def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode, skip_video, num_trials, timestamp, pruner_path, save_pruning_image,  one_gate, reuse_block, rollout_cache, ddim, save_gate):
 
      # Set random seed
     seed = int(seed)  
@@ -321,7 +132,7 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
         checkpoint = checkpoint
 
     if rollout_cache:
-        pruner_base_path = os.path.join("stage1result","stage2ckpt",stage2_mode,timestamp,train_id,task_name,str(stage1_epoch))
+        pruner_base_path = os.path.join(output_dir, timestamp, train_id, task_name)
 
     elif output_dir == 'exp_output':
         pruner_base_path = os.path.join(output_dir,timestamp,'train',f'train{train_id}',task_name)
@@ -351,7 +162,7 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
     # output_dir
     original_output_dir = output_dir
     if rollout_cache:
-        output_dir = os.path.join("stage1result","stage2eval",stage2_mode,timestamp,train_id,task_name,str(stage1_epoch),epoch)
+        output_dir = os.path.join('sim_result', 'pruner_eval', timestamp, train_id, task_name, epoch)
     elif output_dir == 'exp_output':
         output_dir = os.path.join(output_dir,timestamp,'eval',train_id,task_name,epoch)
     elif output_dir == 'output' :
@@ -417,7 +228,7 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
 
     # Original policy
     if rollout_cache:
-        from TTSInfer.pruner.stage2.trajectory_dataset import TrajectoryDataset
+        from TTSInfer.pruner.trajectory.trajectory_dataset import TrajectoryDataset
         trajectory_data_dir = f"PrunerData/pruner_tra_data_max/trajectories/{task_name}"
 
         # 1episode
@@ -669,11 +480,10 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
                 _, first_gates = gate_tracker.gates_sequence[0]
                 gate_dim = first_gates.shape[-1] if isinstance(first_gates, torch.Tensor) else 3
                 
-                # rollout_cachegate
+                # rollout-cache trajectory gates
                 if rollout_cache and gate_dim == 4:
-                    # Stage2
-                    logger.info(f"Stage2 (gate_dim={gate_dim})")
-                    create_gate_animation_stage2(
+                    logger.info(f"Trajectory gates enabled (gate_dim={gate_dim})")
+                    create_gate_animation_trajectory(
                         gates_sequence=gate_tracker.gates_sequence,
                         block_names=block_names,
                         output_path=gif_path,
@@ -681,8 +491,7 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
                         duration=0.3  # 0.3
                     )
                 else:
-                    # Stage1
-                    logger.info(f" (gate_dim={gate_dim})")
+                    logger.info(f"Standard gates enabled (gate_dim={gate_dim})")
                     create_gate_animation(
                         gates_sequence=gate_tracker.gates_sequence,
                         block_names=block_names,

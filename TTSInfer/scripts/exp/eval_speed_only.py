@@ -1,9 +1,4 @@
-"""
-
-
-
- eval_pruner_dp.py 
-"""
+"""Speed-only evaluation utilities for the released pruner pipeline."""
 
 import os
 import sys

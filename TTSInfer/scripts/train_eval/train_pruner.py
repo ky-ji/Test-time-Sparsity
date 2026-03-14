@@ -1,76 +1,4 @@
-"""
-yamlConfig
-
-:
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 40ddim96 \
---task_name square_ph \
---device cuda:6 \
---output_dir exp_stage2 \
---pruner_epoch 40ddim96 \
---train_version 0 \
---datatype ddim
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 40ddim96 \
---task_name square_mh \
---device cuda:2 \
---output_dir exp_stage2 \
---pruner_epoch 40ddim96 \
---train_version 2 \
---datatype ddim 
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 40ddim96 \
---task_name kitchen \
---device cuda:2 \
---output_dir exp_stage2 \
---pruner_epoch 40ddim96 \
---train_version 0 \
---datatype ddim
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 2stage48 \
---task_name lift_ph \
---device cuda:3 \
---output_dir exp_stage2 \
---pruner_epoch 48 \
---train_version 0
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 2stage2 \
---task_name transport_mh \
---device cuda:3 \
---output_dir exp_stage2 \
---pruner_epoch 2 \
---train_version 0
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 2stage2 \
---task_name tool_hang_ph \
---device cuda:0 \
---output_dir exp_stage2 \
---pruner_epoch 2 \
---train_version 0
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 2stage2 \
---task_name square_ph \
---device cuda:2 \
---output_dir exp_stage2 \
---pruner_epoch 2 \
---train_version 0
-
-python TTSInfer/scripts/train_pruner_2stage.py \
---config_id 2stage2 \
---task_name square_mh \
---device cuda: \
---output_dir exp_stage2 \
---pruner_epoch 2 \
---train_version 0
-
-"""
+"""Trajectory-based pruner training for simulation."""
 
 #!/usr/bin/env python
 from __future__ import annotations
@@ -101,11 +29,11 @@ from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from TTSInfer.acceleration.rollout.pruner_warpper_train import CachePrunerWrapper
 from TTSInfer.pruner.train.gate_scheduler import apply_scheduler, calculate_pruning_ratio
 from TTSInfer.pruner.train.losses import compose_total_loss
-from TTSInfer.pruner.train.train_utils import save_pruner_ckpt, save_json, set_seed, visualize_hard_gates, visualize_hard_gates_stage2, create_gate_animation, NormalizerManager
+from TTSInfer.pruner.train.train_utils import save_pruner_ckpt, save_json, set_seed, visualize_hard_gates, visualize_hard_gates_trajectory, create_gate_animation, NormalizerManager
 from TTSInfer.pruner.train.logger import Logger
 from TTSInfer.pruner import utils
-from TTSInfer.pruner.train.gate_scheduler import calculate_gate_statistics_stage2
-from TTSInfer.pruner.stage2.trajectory_dataset import TrajectoryDataset
+from TTSInfer.pruner.train.gate_scheduler import calculate_gate_statistics_trajectory
+from TTSInfer.pruner.trajectory.trajectory_dataset import TrajectoryDataset
 from TTSInfer.pruner.train.transformer_pruner import TransformerPruner
 from TTSInfer.pruner.train.train_utils import enumerate_decoder_block_keys
 from datetime import datetime, timezone
@@ -142,8 +70,6 @@ def override_config_with_args(config: Dict[str, Any], args: argparse.Namespace) 
     if args.checkpoint is not None:
         config['checkpoint']['path'] = args.checkpoint
     
-    if args.pruner_epoch is not None:
-        config['basic']['pruner_epoch'] = args.pruner_epoch
     if args.lr is not None:
         config['training']['lr'] = args.lr
     if args.target_prune_ratio is not None:
@@ -165,7 +91,6 @@ def create_args_from_config(config: Dict[str, Any]) -> argparse.Namespace:
     args.output_dir = config['basic']['output_dir']
     args.task_name = config['basic']['task_name']
     args.train_version = config['basic']['train_version']
-    args.pruner_epoch = config['basic']['pruner_epoch']
     args.ddim = config['basic'].get('ddim', None)  # DDIMNonescheduler
     args.datatype = config['basic'].get('datatype', None)
     args.checkpoint = utils.get_task_ckpt(config['basic']['task_name'],config['basic']['train_version'])
@@ -178,14 +103,14 @@ def create_args_from_config(config: Dict[str, Any]) -> argparse.Namespace:
     args.early_stop = config['training']['early_stop']
 
     
-    args.num_batch_train_tra = config['stage2'].get('num_batch_train_tra', 3)
-    args.num_batch_val_tra = config['stage2'].get('num_batch_val_tra', 2)
-    args.train_tra_batch_size = config['stage2'].get('train_tra_batch_size', 32)
-    args.val_tra_batch_size = config['stage2'].get('val_tra_batch_size', 8)
-    args.epochs_stage2 = config['stage2'].get('epochs_tra', config['stage2'].get('epochs', 10))
-    args.lr_stage2 = config['stage2'].get('lr', 1.0e-06)
-    args.min_lr_stage2 = config['stage2'].get('lr_min', 1.0e-07)
-    args.init_bias_stage2 = config['stage2'].get('init_bias', 0.0)
+    trajectory_training = config['trajectory_training']
+    args.num_batch_train_tra = trajectory_training.get('num_batch_train_tra', 3)
+    args.num_batch_val_tra = trajectory_training.get('num_batch_val_tra', 2)
+    args.train_tra_batch_size = trajectory_training.get('train_tra_batch_size', 32)
+    args.val_tra_batch_size = trajectory_training.get('val_tra_batch_size', 8)
+    args.epochs_trajectory = trajectory_training.get('epochs', 10)
+    args.lr_trajectory = trajectory_training.get('lr', 1.0e-06)
+    args.min_lr_trajectory = trajectory_training.get('lr_min', 1.0e-07)
     
     args.optimizer_config = config['training']['optimizer']
     args.weight_decay_config = args.optimizer_config['weight_decay']
@@ -289,14 +214,14 @@ def initialize_new_pruner(cfg, policy, args, device):
     return pruner
 
 
-def train_with_config(task_name: str, device: str, config_id: str, output_dir: str = None, train_version: int = 0, use_direct_output_dir: bool = False) -> bool:
+def train_with_config(task_name: str, device: str, config_path: str, output_dir: str = None, train_version: int = 0, use_direct_output_dir: bool = False) -> bool:
     """
     Config
     
     Args:
         task_name: Task name
         device: Device ( 'cuda:0')
-        config_id: Config
+        config_path: Config path
         output_dir: 
         train_version: checkpoint
         use_direct_output_dir: output_dir
@@ -304,9 +229,6 @@ def train_with_config(task_name: str, device: str, config_id: str, output_dir: s
     Returns:
         bool: 
     """
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    config_path = os.path.join(project_root, 'pruner_config', f'training_config_{config_id}.yaml')
-    
     # Config
     if not os.path.exists(config_path):
         print(f": Config: {config_path}")
@@ -350,12 +272,12 @@ def _run_training(args, device_str: str, use_direct_output_dir: bool = False, co
     
     # The public simulation pipeline always trains from scratch on trajectory data.
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    stage2_output_path = os.path.join('stage1result','stage2ckpt',"end2end",timestamp,str(args.train_version),args.task_name,str(args.pruner_epoch))
-    os.makedirs(stage2_output_path, exist_ok=True)
+    train_output_path = os.path.join(args.output_dir, 'pruner_ckpt', timestamp, str(args.train_version), args.task_name)
+    os.makedirs(train_output_path, exist_ok=True)
     
     # Config
     if config_dict is not None:
-        config_save_path = os.path.join(stage2_output_path, 'training_config.yaml')
+        config_save_path = os.path.join(train_output_path, 'training_config.yaml')
         os.makedirs(os.path.dirname(config_save_path), exist_ok=True)
         with open(config_save_path, 'w', encoding='utf-8') as f:
             yaml.dump(config_dict, f, allow_unicode=True, default_flow_style=False)
@@ -417,7 +339,7 @@ def _run_training(args, device_str: str, use_direct_output_dir: bool = False, co
     optimizer_config = getattr(args, 'optimizer_config', {})
     optim = torch.optim.AdamW(
         pruner.parameters(),
-        lr=args.lr_stage2,
+        lr=args.lr_trajectory,
         betas=optimizer_config.get('betas', [0.9, 0.999]),
         weight_decay=1e-4,
     )
@@ -426,7 +348,7 @@ def _run_training(args, device_str: str, use_direct_output_dir: bool = False, co
     def warmup_linear_scheduler(epoch):
         if epoch < args.warmup_steps:
             # Warmup phase: Linear warmup to initial learning rate
-            warmup_factor = args.min_lr_stage2/args.lr_stage2 + float(epoch) / float(max(1, args.warmup_steps))
+            warmup_factor = args.min_lr_trajectory/args.lr_trajectory + float(epoch) / float(max(1, args.warmup_steps))
             return warmup_factor
         else:
             # Linear decay phase: Linear decay from initial LR to minimum LR
@@ -438,7 +360,7 @@ def _run_training(args, device_str: str, use_direct_output_dir: bool = False, co
             decay_progress = min(decay_progress, 1.0)  # 1.0
             
             # 1.0min_lr_ratio
-            min_lr_ratio = args.min_lr_stage2 / args.lr_stage2 
+            min_lr_ratio = args.min_lr_trajectory / args.lr_trajectory 
             lr_factor = 1.0 - decay_progress * (1.0 - min_lr_ratio)
             return max(min_lr_ratio, lr_factor)
     
@@ -456,7 +378,7 @@ def _run_training(args, device_str: str, use_direct_output_dir: bool = False, co
     
     # ==================== Training Loop ====================
     
-    for epoch in range(args.epochs_stage2):   
+    for epoch in range(args.epochs_trajectory):   
         # Training phase
         train_metrics = train_epoch_trajectory(
             epoch=epoch,
@@ -489,28 +411,28 @@ def _run_training(args, device_str: str, use_direct_output_dir: bool = False, co
         
         # hard_gate10frame
         if val_metrics.get('gate_hard_frame10') is not None:
-            visualization_path = os.path.join(stage2_output_path, f'valid_epoch_{epoch}_gate_visualization_frame10.png')
-            visualize_hard_gates_stage2(
+            visualization_path = os.path.join(train_output_path, f'valid_epoch_{epoch}_gate_visualization_frame10.png')
+            visualize_hard_gates_trajectory(
                 gate_tensor=val_metrics['gate_hard_frame10'],
                 block_names=block_keys,
                 output_path=visualization_path,
-                title=f"Stage2 Hard Gates Frame10 ({args.task_name}, Epoch: {epoch}, Target Ratio: {args.target_prune_ratio:.2f})"
+                title=f"Trajectory Training Hard Gates Frame10 ({args.task_name}, Epoch: {epoch}, Target Ratio: {args.target_prune_ratio:.2f})"
             )
         
         # hard_gate30frame
         if val_metrics.get('gate_hard_frame30') is not None:
-            visualization_path = os.path.join(stage2_output_path, f'valid_epoch_{epoch}_gate_visualization_frame30.png')
-            visualize_hard_gates_stage2(
+            visualization_path = os.path.join(train_output_path, f'valid_epoch_{epoch}_gate_visualization_frame30.png')
+            visualize_hard_gates_trajectory(
                 gate_tensor=val_metrics['gate_hard_frame30'],
                 block_names=block_keys,
                 output_path=visualization_path,
-                title=f"Stage2 Hard Gates Frame30 ({args.task_name}, Epoch: {epoch}, Target Ratio: {args.target_prune_ratio:.2f})"
+                title=f"Trajectory Training Hard Gates Frame30 ({args.task_name}, Epoch: {epoch}, Target Ratio: {args.target_prune_ratio:.2f})"
             )
 
-        if logger.early_stop(val_metrics, stage2_output_path, epoch, args, pruner):
+        if logger.early_stop(val_metrics, train_output_path, epoch, args, pruner):
             break
     
-    final_save_path = os.path.join(stage2_output_path, 'final_pruner.pth')
+    final_save_path = os.path.join(train_output_path, 'final_pruner.pth')
     torch.save({
         'model_state_dict': pruner.state_dict(),
         'structure': args.structure,
@@ -518,7 +440,7 @@ def _run_training(args, device_str: str, use_direct_output_dir: bool = False, co
         'attn_heads': args.attn_heads,
         'dim_feedforward': args.dim_feedforward,
         'block_encoder_type': args.block_encoder_type,
-        'epoch': args.epochs_stage2,
+        'epoch': args.epochs_trajectory,
     }, final_save_path)
     print(f"\n✓ : {final_save_path}")
     
@@ -564,7 +486,7 @@ def train_epoch_trajectory( epoch, pruner, policy, train_dataset,
             gate_hard = policy._cache['gate']
             
             # Calculate pruning ratio
-            gate_stats = calculate_gate_statistics_stage2(gate_hard)
+            gate_stats = calculate_gate_statistics_trajectory(gate_hard)
             current_pruning_ratio = gate_stats['pruning_ratio']
             
             if frame_idx == 0:
@@ -677,7 +599,7 @@ def validate_epoch_trajectory( pruner, policy, val_dataset,
                     vis_gate_hard_frame30 = gate_hard[0].detach().cpu()
                 
                 # Calculate pruning ratio
-                gate_stats = calculate_gate_statistics_stage2(gate_hard)
+                gate_stats = calculate_gate_statistics_trajectory(gate_hard)
                 current_pruning_ratio = gate_stats['pruning_ratio']
                 
                 # framefirst
@@ -746,11 +668,10 @@ def main():
     parser.add_argument('--seed', type=int, help='Random seed (Override config file)')
     parser.add_argument('--output_dir', type=str, help=' (Override config file)')
     parser.add_argument('--checkpoint', type=str, help='Checkpoint path (overrides config)')
-    parser.add_argument('--pruner_epoch', type=str, help='Legacy run tag used in output folder naming')
     parser.add_argument('--lr', type=float, help=' (Override config file)')
     parser.add_argument('--target_prune_ratio', type=float, help=' (Override config file)')
     parser.add_argument('--hidden_dim', type=int, help=' (Override config file)')
-    parser.add_argument('--config_id', type=str, help='Config (Override config file)')
+    parser.add_argument('--config', type=str, default=None, help='Path to the training config file')
     parser.add_argument('--use_direct_output_dir', action='store_true', help='output_dir (Override config file)')
     parser.add_argument('--train_version', type=int,default=0, help=' (Override config file)')
     parser.add_argument('--ddim', type=int, default=None, help='DDIM scheduler--ddim 4040DDIM')
@@ -759,7 +680,7 @@ def main():
     cmd_args = parser.parse_args()
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    config_path = os.path.join(project_root, 'pruner_config', f'training_config_{cmd_args.config_id}.yaml')
+    config_path = cmd_args.config or os.path.join(project_root, 'pruner_config', 'training_config.yaml')
     
     # Config
     if not os.path.exists(config_path):
