@@ -1,0 +1,52 @@
+# TTS Pruner Training Configuration
+# Config4x A100 80G
+
+basic:
+  task_name: "assembly_bun"
+  seed: 0
+  use_wandb: true
+  use_tensorboard: false
+
+model:
+  structure: "ca"
+  hidden_dim: 512 
+  attn_heads: 8
+  dim_feedforward: 1024
+  block_encoder_type: "SA"
+
+pruning:
+  target_prune_ratio: 0.90
+
+loss:
+  global_lc: true
+  consistency: "l1"
+  sparse: "l1"
+  lamb_sparse: 1.0
+  use_target_action: true
+
+training:
+  # ========== 4x A100 80G Config ==========
+  #  batch size = batch_size × num_gpus × grad_accum_steps
+  #                 = 64 × 4 × 2 = 512
+  batch_size: 128        # A100 80G  batch
+  grad_accum_steps: 4   # 
+  
+  epochs: 45
+  lr: 0.0001
+  min_lr: 0.000001
+  warmup_steps: 4
+  patience: 30
+  early_stop: true
+  
+  use_amp: true                   # FP16
+  trajectory_sample_ratio: 1.0    # 
+  num_workers: 8                  # DataLoader workers
+  pin_memory: true                #  CPU→GPU 
+  
+  optimizer:
+    betas: [0.9, 0.999]
+    weight_decay:
+      bias_no_decay: 0.0
+      embeddings: 0.000001
+      mlp_head: 0.00001
+      transformer: 0.001
