@@ -42,9 +42,9 @@ repo_root_str = str(repo_root)
 if repo_root_str not in sys.path:
     sys.path.insert(0, repo_root_str)
 
-#  pruner/TransformerPruner  RealWorld-SAG  TTSInfer/SAGInfer
+# TTSInfer  pruner/TransformerPruner  sys.path
 realworld_sag_root = repo_root.parent
-for maybe in (realworld_sag_root / "TTSInfer", realworld_sag_root / "SAGInfer"):
+for maybe in (realworld_sag_root / "TTSInfer",):
     if maybe.exists() and str(maybe) not in sys.path:
         sys.path.insert(0, str(maybe))
 

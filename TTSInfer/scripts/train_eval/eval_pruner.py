@@ -108,12 +108,11 @@ sys.stderr = open(sys.stderr.fileno(), mode='w', buffering=1)
 @click.option('--num_trials', default=10, type=int, help='Number of benchmark trials')
 @click.option('--save_pruning_image', default=True, type=bool, help='Save pruning images')
 @click.option('--reuse_block', default=False, type=bool, help=' block embedding  self-attention')
-@click.option('--rollout_cache', default=False, type=bool, help='')
 @click.option('--ddim', default=None, type=int, help='DDIM scheduler--ddim 4040DDIM')
 @click.option('--save_gate', default=False, type=bool, help='hard gatesoft gate')
 
 
-def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode, skip_video, num_trials, timestamp, pruner_path, save_pruning_image,  one_gate, reuse_block, rollout_cache, ddim, save_gate):
+def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode, skip_video, num_trials, timestamp, pruner_path, save_pruning_image,  one_gate, reuse_block, ddim, save_gate):
 
      # Set random seed
     seed = int(seed)  
@@ -131,19 +130,7 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
     else:
         checkpoint = checkpoint
 
-    if rollout_cache:
-        pruner_base_path = os.path.join(output_dir, timestamp, train_id, task_name)
-
-    elif output_dir == 'exp_output':
-        pruner_base_path = os.path.join(output_dir,timestamp,'train',f'train{train_id}',task_name)
-    elif output_dir == 'output' :
-        pruner_base_path = os.path.join(output_dir,task_name,timestamp,'train')
-    else:
-        # output_dirtrain_eval_integrated_multi.py
-        if os.path.exists(output_dir) and any(f.startswith('pruner_model_') for f in os.listdir(output_dir)):
-            pruner_base_path = output_dir
-        else:
-            pruner_base_path = os.path.join('exp_output',timestamp,'train',f'train{train_id}',task_name)
+    pruner_base_path = os.path.join(output_dir, timestamp, train_id, task_name)
 
     if pruner_path == 'auto':
         pruner_files = [f for f in os.listdir(pruner_base_path) if f.startswith(f'pruner_model_{epoch}_') and f.endswith('.pt')]
@@ -158,23 +145,8 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
         #  "pruner_model_{epoch}_{score}.pt"
         pruner_path = os.path.join(pruner_base_path, pruner_path)
 
-    # eval
-    # output_dir
-    original_output_dir = output_dir
-    if rollout_cache:
-        output_dir = os.path.join('sim_result', 'pruner_eval', timestamp, train_id, task_name, epoch)
-    elif output_dir == 'exp_output':
-        output_dir = os.path.join(output_dir,timestamp,'eval',train_id,task_name,epoch)
-    elif output_dir == 'output' :
-        output_dir = os.path.join(output_dir,task_name,timestamp,'eval',epoch)
-    else:
-        # eval
-        if 'train' in output_dir:
-            # traineval
-            eval_output_dir = output_dir.replace('/train/', '/eval/')
-            output_dir = os.path.join(eval_output_dir, epoch)
-        else:
-            output_dir = os.path.join('exp_output',timestamp,'eval',train_id,task_name,epoch)
+    # eval output dir
+    output_dir = os.path.join('sim_result', 'pruner_eval', timestamp, train_id, task_name, epoch)
    
     os.makedirs(output_dir, exist_ok=True)
     logger.info(f": {output_dir}")
@@ -209,7 +181,7 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
         tgt_sa = reuse_block_module(pruner_path, cfg, torch_device)
         logger.info(f"[reuse_block] tgt_sa  SA block: {tgt_sa.shape}")
     
-    original_policy, pruned_policy = create_policies(base_policy, torch_device, pruner_path, cfg,  one_gate, reuse_block, tgt_sa,rollout_cache)
+    original_policy, pruned_policy = create_policies(base_policy, torch_device, pruner_path, cfg, one_gate, reuse_block, tgt_sa)
 
     actions_per_inference = get_actions_per_inference(original_policy, cfg)
     logger.info(f"Actions per inference: {actions_per_inference}")
@@ -227,25 +199,20 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
     
 
     # Original policy
-    if rollout_cache:
-        from TTSInfer.pruner.trajectory.trajectory_dataset import TrajectoryDataset
-        trajectory_data_dir = f"PrunerData/pruner_tra_data_max/trajectories/{task_name}"
+    from TTSInfer.pruner.trajectory.trajectory_dataset import TrajectoryDataset
+    trajectory_data_dir = f"pruner_tra_data_max/trajectories/{task_name}"
 
-        # 1episode
-        trajectory_dataset = TrajectoryDataset(
-            data_dir=trajectory_data_dir,
-            device='cpu',
-            episode_indices=[0]  # episode
-        )
-    
-        avg_original, std_original = benchmark_policy_with_trajectory(
-            original_policy, trajectory_dataset, torch_device, num_trials, 
-            "Original policy", use_rollout_cache=False
-        )
-    else:
-        avg_original, std_original = benchmark_policy(
-            original_policy, obs_dict, torch_device, num_trials, "Original policy"
-        )
+    # 1episode
+    trajectory_dataset = TrajectoryDataset(
+        data_dir=trajectory_data_dir,
+        device='cpu',
+        episode_indices=[0]  # episode
+    )
+
+    avg_original, std_original = benchmark_policy_with_trajectory(
+        original_policy, trajectory_dataset, torch_device, num_trials,
+        "Original policy", use_rollout_cache=False
+    )
     freq_original = (actions_per_inference / avg_original) if avg_original > 0 else 0.0
     
     # Original policyFLOPs
@@ -259,19 +226,11 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
     flops_pruned = 0.0
     
     if pruned_policy is not None:
-        if rollout_cache:
-            # Pruned policyrollout cache
-            avg_pruned, std_pruned = benchmark_policy_with_trajectory(
-                pruned_policy, trajectory_dataset, torch_device, num_trials, 
-                "Pruned policy", use_rollout_cache=True
-            )
-        else:
-            avg_pruned, std_pruned = benchmark_policy(
-                pruned_policy, obs_dict, torch_device, num_trials, "Pruned policy"
-            )
+        avg_pruned, std_pruned = benchmark_policy_with_trajectory(
+            pruned_policy, trajectory_dataset, torch_device, num_trials,
+            "Pruned policy", use_rollout_cache=True
+        )
         
-        #  pruner
-        # avg_pruner, std_pruner = test_pruner_time( pruned_policy, obs_dict, torch_device, num_trials, "pruner")
         freq_pruned = (actions_per_inference / avg_pruned) if avg_pruned > 0 else 0.0
         speedup = (avg_original / avg_pruned) if (avg_original > 0 and avg_pruned > 0) else 0.0
         logger.info(f": {speedup:.2f}x")
@@ -481,7 +440,7 @@ def main(checkpoint, epoch, train_id, output_dir, task_name, seed, device, mode,
                 gate_dim = first_gates.shape[-1] if isinstance(first_gates, torch.Tensor) else 3
                 
                 # rollout-cache trajectory gates
-                if rollout_cache and gate_dim == 4:
+                if gate_dim == 4:
                     logger.info(f"Trajectory gates enabled (gate_dim={gate_dim})")
                     create_gate_animation_trajectory(
                         gates_sequence=gate_tracker.gates_sequence,

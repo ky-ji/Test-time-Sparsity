@@ -623,8 +623,8 @@ def main(checkpoint, pruner_path, task_name, device, batch_size, num_steps):
     
     if pruner_path is not None and os.path.exists(pruner_path):
         logger.info(f"\nPruner: {pruner_path}")
-        pruner = load_pruner_model(pruner_path, cfg, torch_device, policy=base_policy, 
-                                   reuse_block=False, tgt_sa=None, rollout_cache=True)
+        pruner = load_pruner_model(pruner_path, cfg, torch_device, policy=base_policy,
+                                   reuse_block=False, tgt_sa=None)
         pruner.eval()
         
         block_keys = get_block_keys_from_model(model, cfg)

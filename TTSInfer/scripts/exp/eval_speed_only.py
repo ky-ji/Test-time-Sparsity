@@ -21,10 +21,10 @@ from omegaconf import OmegaConf
 from typing import Tuple, Optional, Any, Dict
 
 from TTSInfer.acceleration.rollout.pruner_warpper_test_stream import CachePrunerWrapper as CachePrunerWrapperTest
-from pruner.eval.eval_utils import (
+from TTSInfer.pruner.eval.eval_utils import (
     construct_obs_dict, safe_estimate_flops, benchmark_policy, warmup_policy,
-    get_actions_per_inference, load_workspace, 
-    create_policies, create_policies_offline, test_pruner_time
+    get_actions_per_inference, load_workspace,
+    create_policies,
 )
 from TTSInfer.pruner.utils import get_task_ckpt_with_train_version
 
@@ -192,8 +192,8 @@ def main(checkpoint, epoch, train_id, train_root, output_dir, task_name, seed, d
         # Pruner
         if test_pruner and hasattr(pruned_policy, '_cache') and 'pruner' in pruned_policy._cache:
             logger.info(f"\n=== Pruner  ===")
-            avg_pruner_time, std_pruner_time = test_pruner_time(
-                pruned_policy, obs_dict, torch_device, num_trials, "Pruner", if_24cache
+            avg_pruner_time, std_pruner_time = benchmark_policy(
+                pruned_policy, obs_dict, torch_device, num_trials, "Pruner"
             )
             
             #  pruner

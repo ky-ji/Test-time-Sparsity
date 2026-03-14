@@ -456,7 +456,7 @@ def load_workspace(checkpoint_path: str, output_dir: str) -> tuple:
     return workspace, cfg
 
 
-def load_pruner_model(pruner_path: str, cfg: Any, device: torch.device, policy=None, reuse_block: bool = False, tgt_sa=None, rollout_cache: bool = False):
+def load_pruner_model(pruner_path: str, cfg: Any, device: torch.device, policy=None, reuse_block: bool = False, tgt_sa=None):
     """Load trained pruner model"""
     # Get model parameters
     num_steps = getattr(cfg, 'num_inference_steps', 100)
@@ -494,9 +494,8 @@ def load_pruner_model(pruner_path: str, cfg: Any, device: torch.device, policy=N
         tgt_sa=tgt_sa
     ).to(device)
   
-    if rollout_cache:
-        from TTSInfer.pruner.trajectory.trajectory_utils import expand_pruner_head_for_rollout_cache
-        pruner = expand_pruner_head_for_rollout_cache(pruner, init_bias_trajectory=0.0)
+    from TTSInfer.pruner.trajectory.trajectory_utils import expand_pruner_head_for_rollout_cache
+    pruner = expand_pruner_head_for_rollout_cache(pruner, init_bias_trajectory=0.0)
     
     if os.path.exists(pruner_path):
         #checkpoint = torch.load(pruner_path, map_location='cpu', weights_only=False)
@@ -528,7 +527,7 @@ def load_pruner_model(pruner_path: str, cfg: Any, device: torch.device, policy=N
     return pruner
 
 
-def create_policies(base_policy: Any, device: torch.device,  pruner_path: Optional[str] = None, cfg: Any = None,one_gate: bool = False, reuse_block: bool = False, tgt_sa = None,rollout_cache: bool = False) -> Tuple[Any, Optional[Any]]:
+def create_policies(base_policy: Any, device: torch.device, pruner_path: Optional[str] = None, cfg: Any = None, one_gate: bool = False, reuse_block: bool = False, tgt_sa=None) -> Tuple[Any, Optional[Any]]:
     """Create original and pruned policies"""
 
     from TTSInfer.acceleration.rollout.pruner_warpper_test_stream import CachePrunerWrapper
@@ -548,7 +547,7 @@ def create_policies(base_policy: Any, device: torch.device,  pruner_path: Option
     # Load pruner model
     pruner = None
     if pruner_path:
-        pruner = load_pruner_model(pruner_path, cfg, device,base_policy, reuse_block, tgt_sa,rollout_cache)
+        pruner = load_pruner_model(pruner_path, cfg, device, base_policy, reuse_block, tgt_sa)
     
     if pruner is None:
         logger.warning("Failed to load pruner model")
