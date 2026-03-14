@@ -14,6 +14,10 @@
 
 [Paper]() | [Code](https://github.com/ky-ji/Test-time-Sparsity)
 
+<p align="center">
+  <img src="TTSInfer/assets/inference.png" width="85%" alt="TTS Inference Pipeline"/>
+</p>
+
 </div>
 
 ---
@@ -118,10 +122,6 @@ python -m TTSInfer.scripts.train_eval.eval_pruner \
   --epoch <best_epoch> \
   --device cuda:0
 ```
-
-<p align="center">
-  <img src="TTSInfer/assets/inference.png" width="75%" alt="TTS Inference Pipeline"/>
-</p>
 
 ### Step 6: Speed Benchmarking
 
