@@ -24,7 +24,7 @@ pruning:
   target_prune_ratio: 0.93
 
 training:
-  early_stop: true
+  early_stop: false
   epochs: 45
   lr: 0.0001
   min_lr: 1.0e-06
@@ -38,7 +38,7 @@ training:
       mlp_head: 1.0e-05
       obs_encoder: 0.0001
       transformer: 0.001
-  patience: 30
+  patience: 5
   warmup_steps: 4
 
 trajectory_training:
